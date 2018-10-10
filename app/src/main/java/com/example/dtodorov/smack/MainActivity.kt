@@ -1,5 +1,6 @@
 package com.example.dtodorov.smack
 
+import android.content.Intent
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
@@ -35,7 +36,8 @@ class MainActivity : AppCompatActivity(){
     }
 
     fun loginButtonNavClicked (view: View){
-
+        val loginActivityIntent = Intent(this, LoginActivity::class.java)
+        startActivity(loginActivityIntent)
     }
 
     fun addChannelButtonClicked (view: View){
@@ -43,6 +45,6 @@ class MainActivity : AppCompatActivity(){
     }
 
     fun sendMessageButtonClicked (view: View){
-        
+
     }
 }
