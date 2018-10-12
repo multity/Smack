@@ -1,14 +1,23 @@
 package com.example.dtodorov.smack.Controller
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.graphics.Color
 import android.os.Bundle
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import com.example.dtodorov.smack.R
+import com.example.dtodorov.smack.Services.AuthService
+import com.example.dtodorov.smack.Services.UserDataService
+import com.example.dtodorov.smack.Utilities.BROADCAST_USER_DATA_CHANGED
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlinx.android.synthetic.main.nav_header_main.*
 
 class MainActivity : AppCompatActivity(){
 
@@ -22,6 +31,21 @@ class MainActivity : AppCompatActivity(){
         drawer_layout.addDrawerListener(toggle)
         toggle.syncState()
 
+        LocalBroadcastManager.getInstance(this).registerReceiver(userDataChangeReceiver, IntentFilter(BROADCAST_USER_DATA_CHANGED))
+    }
+
+    private val userDataChangeReceiver = object: BroadcastReceiver(){
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if(AuthService.isLoggedIn){
+                usernameNavHeader.text = UserDataService.name
+                userEmailNavHeader.text = UserDataService.email
+                val resourceId = resources.getIdentifier(UserDataService.avatarName, "drawable", packageName)
+                userImageNavHeader.setImageResource(resourceId)
+                println(UserDataService.avatarColor)
+                userImageNavHeader.setBackgroundColor(UserDataService.returnAvatarColor(UserDataService.avatarColor))
+                loginButtonNavHeader.text = "Logout"
+            }
+        }
     }
 
     override fun onBackPressed() {
@@ -33,8 +57,19 @@ class MainActivity : AppCompatActivity(){
     }
 
     fun loginButtonNavClicked (view: View){
-        val loginActivityIntent = Intent(this, LoginActivity::class.java)
-        startActivity(loginActivityIntent)
+
+        if(AuthService.isLoggedIn){
+            //log out
+            UserDataService.logout()
+            usernameNavHeader.text = "Login"
+            userEmailNavHeader.text = ""
+            userImageNavHeader.setImageResource(R.drawable.profiledefault)
+            userImageNavHeader.setBackgroundColor(Color.TRANSPARENT)
+            loginButtonNavHeader.text = "Login"
+        }else{
+            val loginActivityIntent = Intent(this, LoginActivity::class.java)
+            startActivity(loginActivityIntent)
+        }
     }
 
     fun addChannelButtonClicked (view: View){

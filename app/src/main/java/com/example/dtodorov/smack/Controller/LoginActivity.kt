@@ -16,6 +16,7 @@ class LoginActivity : AppCompatActivity() {
     fun loginCreateUserButtonClicked (view: View){
         val createUserActiviryIntent = Intent(this, CreateUserActivity::class.java)
         startActivity(createUserActiviryIntent)
+        finish()
     }
 
     fun loginLoginButtonClicked (view: View){
