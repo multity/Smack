@@ -7,6 +7,7 @@ import android.view.View
 import com.android.volley.toolbox.Volley
 import com.example.dtodorov.smack.R
 import com.example.dtodorov.smack.Services.AuthService
+import com.example.dtodorov.smack.Services.UserDataService
 import kotlinx.android.synthetic.main.activity_create_user.*
 import java.util.*
 
@@ -51,6 +52,8 @@ class CreateUserActivity : AppCompatActivity() {
     }
 
     fun createUserButtonClicked (view: View){
+
+        val userName = createUsernameText.text.toString()
         val email = createEmailText.text.toString()
         val password = createPasswordText.text.toString()
 
@@ -58,8 +61,14 @@ class CreateUserActivity : AppCompatActivity() {
             if(registerSuccess){
                 AuthService.loginUser(this,email,password){loginSuccess ->
                     if(loginSuccess){
-                        println(AuthService.authToken)
-                        println(AuthService.userEmail)
+                        AuthService.createUser(this, userName, email, userAvatar, avatarColor){createSuccess ->
+                            if(createSuccess){
+                                println(UserDataService.avatarName)
+                                println(UserDataService.avatarColor)
+                                println(UserDataService.name)
+                                finish()
+                            }
+                        }
                     }
                 }
             }
