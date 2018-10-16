@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.Color
 import android.os.Bundle
-import android.os.Message
 import android.support.v4.content.LocalBroadcastManager
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
@@ -17,6 +16,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import com.example.dtodorov.smack.Model.Channel
+import com.example.dtodorov.smack.Model.Message
 import com.example.dtodorov.smack.R
 import com.example.dtodorov.smack.Services.AuthService
 import com.example.dtodorov.smack.Services.MessageService
@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity(){
         setSupportActionBar(toolbar)
         socket.connect()
         socket.on("channelCreated", onNewChannel)
+        socket.on("messageCreated", onNewMessage)
 
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
@@ -90,7 +91,6 @@ class MainActivity : AppCompatActivity(){
                 userEmailNavHeader.text = UserDataService.email
                 val resourceId = resources.getIdentifier(UserDataService.avatarName, "drawable", packageName)
                 userImageNavHeader.setImageResource(resourceId)
-                println(UserDataService.avatarColor)
                 userImageNavHeader.setBackgroundColor(UserDataService.returnAvatarColor(UserDataService.avatarColor))
                 loginButtonNavHeader.text = "Logout"
                 MessageService.getChannels{ complete ->
@@ -109,6 +109,15 @@ class MainActivity : AppCompatActivity(){
     fun updateWithChannel(){
         mainChannelName.text = "#${selectedChannel?.name}"
         //Download messages with channel
+        if(selectedChannel != null){
+            MessageService.getMessages(selectedChannel!!.id){complete ->
+                if(complete){
+                    for (message in MessageService.messages){
+
+                    }
+                }
+            }
+        }
     }
 
     override fun onBackPressed() {
@@ -160,20 +169,49 @@ class MainActivity : AppCompatActivity(){
     }
 
     private val onNewChannel = Emitter.Listener {args ->
-        runOnUiThread {
-            val channelName = args[0] as String
-            val channelDescription = args[1] as String
-            val channelId = args[2] as String
+        if (App.prefs.isLoggedIn){
+            runOnUiThread {
+                val channelName = args[0] as String
+                val channelDescription = args[1] as String
+                val channelId = args[2] as String
 
-            val newChannel = Channel(channelName, channelDescription, channelId)
-            MessageService.channels.add(newChannel)
-            channelAdapter.notifyDataSetChanged()
+                val newChannel = Channel(channelName, channelDescription, channelId)
+                MessageService.channels.add(newChannel)
+                channelAdapter.notifyDataSetChanged()
+            }
+        }
+    }
+
+    private val onNewMessage = Emitter.Listener { args ->
+        if(App.prefs.isLoggedIn){
+            runOnUiThread {
+                val channelId = args[2] as String
+                if(channelId == selectedChannel?.id){
+                    val msgBody = args[0] as String
+                    //we are skipping args[1] because we don't use it anywhere
+                    val userName = args[3] as String
+                    val userAvatar = args[4] as String
+                    val userAvatarColor = args[5] as String
+                    val id = args[6] as String
+                    val timestamp = args[7] as String
+                    val newMessage = Message(msgBody, userName, channelId, userAvatar, userAvatarColor, id, timestamp)
+                    MessageService.messages.add(newMessage)
+                }
+            }
         }
 
     }
 
     fun sendMessageButtonClicked (view: View){
-        hideKeyboard()
+        if(App.prefs.isLoggedIn && messageTextField.text.isNotEmpty() && selectedChannel != null){
+            val userId = UserDataService.id
+            val channelId = selectedChannel!!.id
+            socket.emit("newMessage", messageTextField.text.toString(), userId, channelId,
+                    UserDataService.name, UserDataService.avatarName, UserDataService.avatarColor)
+
+            messageTextField.text.clear()
+            hideKeyboard()
+        }
     }
 
     fun hideKeyboard(){
