@@ -14,30 +14,55 @@ import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import com.example.dtodorov.smack.Model.Channel
 import com.example.dtodorov.smack.R
 import com.example.dtodorov.smack.Services.AuthService
+import com.example.dtodorov.smack.Services.MessageService
 import com.example.dtodorov.smack.Services.UserDataService
 import com.example.dtodorov.smack.Utilities.BROADCAST_USER_DATA_CHANGED
+import com.example.dtodorov.smack.Utilities.SOCKET_URL
+import io.socket.client.IO
+import io.socket.emitter.Emitter
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.nav_header_main.*
 
 class MainActivity : AppCompatActivity(){
 
+    val socket = IO.socket(SOCKET_URL)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        socket.connect()
+        socket.on("channelCreated", onNewChannel)
 
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawer_layout.addDrawerListener(toggle)
         toggle.syncState()
-        hideKeyboard()
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(userDataChangeReceiver, IntentFilter(BROADCAST_USER_DATA_CHANGED))
+
+
     }
 
+    override fun onResume() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(userDataChangeReceiver, IntentFilter(BROADCAST_USER_DATA_CHANGED))
+        super.onResume()
+
+    }
+
+    override fun onPause() {
+
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        socket.disconnect()
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(userDataChangeReceiver)
+        super.onDestroy()
+    }
     private val userDataChangeReceiver = object: BroadcastReceiver(){
         override fun onReceive(context: Context?, intent: Intent?) {
             if(AuthService.isLoggedIn){
@@ -90,18 +115,36 @@ class MainActivity : AppCompatActivity(){
                         val channelDesc = descTextField.text.toString()
 
                         //Create channel with the channel name with description
-                        hideKeyboard()
+                        socket.emit("newChannel", channelName, channelDesc)
                     }
                     .setNegativeButton("Cancel") {dialogInterface, i ->
                         // Cancel and close dialog
-                        hideKeyboard()
+
                     }
                     .show()
         }
     }
 
-    fun sendMessageButtonClicked (view: View){
+    private val onNewChannel = Emitter.Listener {args ->
+        runOnUiThread {
+            val channelName = args[0] as String
+            val channelDescription = args[1] as String
+            val channelId = args[2] as String
 
+            val newChannel = Channel(channelName, channelDescription, channelId)
+            MessageService.channels.add(newChannel)
+
+            println(newChannel.name)
+            println(newChannel.description)
+            println(newChannel.id)
+
+
+        }
+
+    }
+
+    fun sendMessageButtonClicked (view: View){
+        hideKeyboard()
     }
 
     fun hideKeyboard(){
